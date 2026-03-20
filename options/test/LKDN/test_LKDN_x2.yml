@@ -9,7 +9,7 @@ datasets:
   test_1:  # the 1st test dataset
     name: Set5
     type: PairedImageDataset
-    dataroot_gt: datasets/Set5/GTmod2
+    dataroot_gt: datasets/Set5/GTmod12
     dataroot_lq: datasets/Set5/LRbicx2
     io_backend:
       type: disk
@@ -17,7 +17,7 @@ datasets:
   test_2:  # the 2nd test dataset
     name: Set14
     type: PairedImageDataset
-    dataroot_gt: datasets/Set14/GTmod2
+    dataroot_gt: datasets/Set14/GTmod12
     dataroot_lq: datasets/Set14/LRbicx2
     io_backend:
       type: disk
@@ -25,7 +25,7 @@ datasets:
   test_3:
     name: BSD100
     type: PairedImageDataset
-    dataroot_gt: datasets/BSD100/GTmod2
+    dataroot_gt: datasets/BSD100/GTmod12
     dataroot_lq: datasets/BSD100/LRbicx2
     io_backend:
       type: disk
@@ -33,7 +33,7 @@ datasets:
   test_4:
     name: Urban100
     type: PairedImageDataset
-    dataroot_gt: datasets/Urban100/GTmod2
+    dataroot_gt: datasets/Urban100/GTmod12
     dataroot_lq: datasets/Urban100/LRbicx2
     io_backend:
       type: disk
@@ -41,7 +41,7 @@ datasets:
   test_5:
     name: Manga109
     type: PairedImageDataset
-    dataroot_gt: datasets/Manga109/GTmod2
+    dataroot_gt: datasets/Manga109/GTmod12
     dataroot_lq: datasets/Manga109/LRbicx2
     io_backend:
       type: disk

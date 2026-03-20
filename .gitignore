@@ -4,6 +4,20 @@ tb_logger/*
 wandb/*
 tmp/*
 
+# dataset
+datasets/
+*.lmdb
+*.mdb
+
+# experiment outputs
+experiments/
+tb_logger/
+wandb/
+
+# checkpoints
+*.pth
+*.pt
+
 docs/api
 scripts/__init__.py
 
