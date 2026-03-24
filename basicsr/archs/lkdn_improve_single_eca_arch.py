@@ -61,7 +61,7 @@ class LKDN_Improve(nn.Module):
     def forward(self, input):
         input = torch.cat([input] * self.num_in, dim=1)
         out_fea = self.fea_conv(input)
-        
+
         out_B1 = self.B1(out_fea)
         out_B2 = self.B2(out_B1)
         out_B3 = self.B3(out_B2)
@@ -74,6 +74,7 @@ class LKDN_Improve(nn.Module):
         trunk = torch.cat([out_B1, out_B2, out_B3, out_B4, out_B5, out_B6, out_B7, out_B8], dim=1)
         out_B = self.c1(trunk)
         out_B = self.GELU(out_B)
+        
         # [add] Single ECA
         out_B = self.eca(out_B)
 
