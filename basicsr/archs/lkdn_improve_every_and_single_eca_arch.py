@@ -8,7 +8,7 @@ from basicsr.utils.registry import ARCH_REGISTRY
 
 
 @ARCH_REGISTRY.register()
-class LKDN_Improve(nn.Module):
+class LKDN_Every_ECA(nn.Module):
 
     def __init__(self,
                  num_in_ch=3,
@@ -33,20 +33,30 @@ class LKDN_Improve(nn.Module):
         print(conv)
         self.fea_conv = BSConvU(num_in_ch * num_in, num_feat, kernel_size=3, padding=1)
 
-        self.B1 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B2 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B3 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B4 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B5 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B6 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B7 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-        self.B8 = LKDB_Improve(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
-
-        # [add] ECA
-        self.eca = ECA(num_feat)
+        self.B1 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B2 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B3 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B4 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B5 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B6 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B7 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
+        self.B8 = LKDN_Every_ECA(in_channels=num_feat, out_channels=num_feat, atten_channels=num_atten, conv=self.conv)
 
         self.c1 = nn.Conv2d(num_feat * num_block, num_feat, 1)
         self.GELU = nn.GELU()
+
+        # [add] Every ECA
+        self.eca1 = ECA(num_feat)
+        self.eca2 = ECA(num_feat)
+        self.eca3 = ECA(num_feat)
+        self.eca4 = ECA(num_feat)
+        self.eca5 = ECA(num_feat)
+        self.eca6 = ECA(num_feat)
+        self.eca7 = ECA(num_feat)
+        self.eca8 = ECA(num_feat)    
+
+        # [add] Single ECA
+        self.eca = ECA(num_feat)
 
         self.c2 = BSConvU(num_feat, num_feat, kernel_size=3, padding=1)
 
@@ -61,19 +71,21 @@ class LKDN_Improve(nn.Module):
     def forward(self, input):
         input = torch.cat([input] * self.num_in, dim=1)
         out_fea = self.fea_conv(input)
-        
-        out_B1 = self.B1(out_fea)
-        out_B2 = self.B2(out_B1)
-        out_B3 = self.B3(out_B2)
-        out_B4 = self.B4(out_B3)
-        out_B5 = self.B5(out_B4)
-        out_B6 = self.B6(out_B5)
-        out_B7 = self.B7(out_B6)
-        out_B8 = self.B8(out_B7)
+
+        # [add] Every ECA
+        out_B1 = self.eca1(self.B1(out_fea))
+        out_B2 = self.eca2(self.B2(out_B1))
+        out_B3 = self.eca3(self.B3(out_B2))
+        out_B4 = self.eca4(self.B4(out_B3))
+        out_B5 = self.eca5(self.B5(out_B4))
+        out_B6 = self.eca6(self.B6(out_B5))
+        out_B7 = self.eca7(self.B7(out_B6))
+        out_B8 = self.eca8(self.B8(out_B7))
 
         trunk = torch.cat([out_B1, out_B2, out_B3, out_B4, out_B5, out_B6, out_B7, out_B8], dim=1)
         out_B = self.c1(trunk)
         out_B = self.GELU(out_B)
+
         # [add] Single ECA
         out_B = self.eca(out_B)
 
