@@ -45,8 +45,9 @@ def yaml_load(f):
         dict: Loaded dict.
     """
     if os.path.isfile(f):
-        with open(f, 'r') as f:
-            return yaml.load(f, Loader=ordered_yaml()[0])
+        print('正在读取YAML文件:', os.path.abspath(f))
+        with open(f, 'r', encoding='utf-8') as file:
+            return yaml.load(file, Loader=ordered_yaml()[0])
     else:
         return yaml.load(f, Loader=ordered_yaml()[0])
 

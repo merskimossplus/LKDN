@@ -1,6 +1,5 @@
 # general settings
-# name: LKDN_C56_A56_BSConvU_adan_ema_x4_DF2K_1000k
-name: LKDN_baseline_50k_stable  # LKDN_C56_A56_adan_ema_x4_DF2K_50k
+name: LKDN-S_C42_A42_adam_ema_x4_DF2K_fine_tune_100k
 model_type: SRModel
 scale: 4
 num_gpu: 1  # set num_gpu: 0 for cpu mode
@@ -23,53 +22,38 @@ datasets:
       # (for lmdb)
       # type: lmdb
 
-    gt_size: 192
+    gt_size: 480
     use_hflip: true
     use_rot: true
 
     # data loader
-    num_worker_per_gpu: 6   # 6
-    batch_size_per_gpu: 64   # 64
+    num_worker_per_gpu: 6
+    batch_size_per_gpu: 8 # 64
     dataset_enlarge_ratio: 100
     prefetch_mode: cuda
-    pin_memory: true       # true
+    pin_memory: true
 
-  val_1:
-    name: Set5
+  val:
+    name: DIV2K_val
     type: PairedImageDataset
-    dataroot_gt: datasets/Set5/GTmod12
-    dataroot_lq: datasets/Set5/LRbicx4
+    dataroot_gt: datasets/DIV2K/DIV2K_valid_HR
+    dataroot_lq: datasets/DIV2K/DIV2K_valid_LR_bicubic/X4
+    filename_tmpl: '{}x4'
     io_backend:
       type: disk
-
-  val_2:
-    name: Set14
-    type: PairedImageDataset
-    dataroot_gt: datasets/Set14/GTmod12
-    dataroot_lq: datasets/Set14/LRbicx4
-    io_backend:
-      type: disk
-
-  # val_3:
-  #   name: Urban100
-  #   type: PairedImageDataset
-  #   dataroot_gt: datasets/Urban100/GTmod12
-  #   dataroot_lq: datasets/Urban100/LRbicx4
-  #   io_backend:
-  #     type: disk
 
 # network structures
 network_g:
-  type: LKDN
+  type: LKDN_S
   num_in_ch: 3
   num_out_ch: 3
-  num_feat: 56
-  num_atten: 56
-  num_block: 8
+  num_feat: 42
+  num_atten: 42
+  num_block: 5
   upscale: 4
   num_in: 4
-  conv: BSConvU
-  upsampler: pixelshuffledirect
+  conv: BSConvU_rep
+  upsampler: pixelshuffle_rep
 
 # path
 path:
@@ -81,52 +65,52 @@ path:
 train:
   ema_decay: 0.999
   optim_g:
-    # type: Adam
-    # lr: !!float 1e-3
-    # weight_decay: 0
-    # betas: [0.9, 0.99]
-
-    type: Adan
-    lr: !!float 5e-3
-    betas: [0.98, 0.92, 0.99]
+    type: Adam
+    lr: !!float 2e-5
     weight_decay: 0
-    foreach: true
+    betas: [0.9, 0.99]
+
+    # type: Adan
+    # lr: !!float 2e-5
+    # betas: [0.98, 0.92, 0.99]
+    # weight_decay: 0
+    # foreach: true
 
   scheduler:
     type: MultiStepLR
-    milestones: [1000000]
+    milestones: [100000]
     gamma: 0.5
 
-  total_iter: 50000     # 1000000
+  total_iter: 100000
   warmup_iter: -1  # no warm up
 
   # losses
   pixel_opt:
-    type: L1Loss
+    type: MSELoss
     loss_weight: 1.0
     reduction: mean
 
 # validation settings
 val:
-  val_freq: !!float 10000 # !!float 5e3
+  val_freq: !!float 5e3
   save_img: false
 
   metrics:
     psnr: # metric name, can be arbitrary
       type: calculate_psnr
       crop_border: 4
-      test_y_channel: true
+      test_y_channel: false
       better: higher  # the higher, the better. Default: higher
     ssim:
       type: calculate_ssim
       crop_border: 4
-      test_y_channel: true
+      test_y_channel: false
       better: higher
 
 # logging settings
 logger:
   print_freq: 100
-  save_checkpoint_freq: !!float 10000   # !!float 5e3
+  save_checkpoint_freq: !!float 5e3
   use_tb_logger: true
   wandb:
     project: ~

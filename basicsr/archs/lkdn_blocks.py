@@ -1,3 +1,4 @@
+# 【new mo kuai】
 import torch
 from torch import nn as nn
 from torch.nn import functional as F
@@ -165,6 +166,23 @@ class Attention(nn.Module):
         return u * attn
 
 
+# [add] ECA
+class ECA(nn.Module):
+    def __init__(self, channels, k_size=3):
+        super().__init__()
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.conv = nn.Conv1d(1, 1, kernel_size=k_size, padding=(k_size - 1) // 2, bias=False)
+        self.sigmoid = nn.Sigmoid()
+
+    def forward(self, x):
+        y = self.avg_pool(x)                          # B,C,1,1
+        y = y.squeeze(-1).transpose(-1, -2)          # B,1,C
+        y = self.conv(y)
+        y = y.transpose(-1, -2).unsqueeze(-1)        # B,C,1,1
+        y = self.sigmoid(y)
+        return x * y.expand_as(x)
+
+
 class LKDB(nn.Module):
 
     def __init__(self, in_channels, out_channels, atten_channels=None, conv=nn.Conv2d):
@@ -195,8 +213,8 @@ class LKDB(nn.Module):
 
     def forward(self, input):
 
-        distilled_c1 = self.act(self.c1_d(input))
-        r_c1 = (self.c1_r(input))
+        distilled_c1 = self.act(self.c1_d(input))       # zheng liu
+        r_c1 = (self.c1_r(input))                       # sheng yu te zheng ti qu
         r_c1 = self.act(r_c1)
 
         distilled_c2 = self.act(self.c2_d(r_c1))
@@ -214,6 +232,67 @@ class LKDB(nn.Module):
 
         out_fused = self.atten(out)
         out_fused = self.c6(out_fused)
+        out_fused = out_fused.permute(0, 2, 3, 1)  # (B, H, W, C)
+        out_fused = self.pixel_norm(out_fused)
+        out_fused = out_fused.permute(0, 3, 1, 2).contiguous()  # (B, C, H, W)
+
+        return out_fused + input
+
+
+# LKDB Improve
+class LKDB_Improve(nn.Module):
+
+    def __init__(self, in_channels, out_channels, atten_channels=None, conv=nn.Conv2d):
+        super().__init__()
+
+        self.dc = self.distilled_channels = in_channels // 2
+        self.rc = self.remaining_channels = in_channels
+        if (atten_channels is None):
+            self.atten_channels = in_channels
+        else:
+            self.atten_channels = atten_channels
+
+        self.c1_d = nn.Conv2d(in_channels, self.dc, 1)
+        self.c1_r = conv(in_channels, self.rc, kernel_size=3, padding=1)
+        self.c2_d = nn.Conv2d(self.rc, self.dc, 1)
+        self.c2_r = conv(self.rc, self.rc, kernel_size=3, padding=1)
+        self.c3_d = nn.Conv2d(self.rc, self.dc, 1)
+        self.c3_r = conv(self.rc, self.rc, kernel_size=3, padding=1)
+
+        self.c4 = BSConvU(self.rc, self.dc, kernel_size=3, padding=1)
+        self.act = nn.GELU()
+
+        self.c5 = nn.Conv2d(self.dc * 4, self.atten_channels, 1)
+        self.atten = Attention(self.atten_channels)
+        self.c6 = nn.Conv2d(self.atten_channels, out_channels, 1)
+        self.pixel_norm = nn.LayerNorm(out_channels)  # channel-wise
+        default_init_weights([self.pixel_norm], 0.1)
+
+        # [add]
+        self.eca = ECA(out_channels)
+
+    def forward(self, input):
+
+        distilled_c1 = self.act(self.c1_d(input))       # zheng liu
+        r_c1 = (self.c1_r(input))                       # sheng yu te zheng ti qu
+        r_c1 = self.act(r_c1)
+
+        distilled_c2 = self.act(self.c2_d(r_c1))
+        r_c2 = (self.c2_r(r_c1))
+        r_c2 = self.act(r_c2)
+
+        distilled_c3 = self.act(self.c3_d(r_c2))
+        r_c3 = (self.c3_r(r_c2))
+        r_c3 = self.act(r_c3)
+
+        r_c4 = self.act(self.c4(r_c3))
+
+        out = torch.cat([distilled_c1, distilled_c2, distilled_c3, r_c4], dim=1)
+        out = self.c5(out)
+
+        out_fused = self.atten(out)
+        out_fused = self.c6(out_fused)
+        out_fused = self.eca(out_fused)     # [add]
         out_fused = out_fused.permute(0, 2, 3, 1)  # (B, H, W, C)
         out_fused = self.pixel_norm(out_fused)
         out_fused = out_fused.permute(0, 3, 1, 2).contiguous()  # (B, C, H, W)
